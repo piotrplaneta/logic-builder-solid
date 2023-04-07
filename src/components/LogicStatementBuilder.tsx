@@ -60,13 +60,7 @@ type Or = {
 
 type Operation = VariableOp | Constant | And | Or | Noop;
 
-const NoopView = ({
-  noop,
-  setOperationTree,
-}: {
-  noop: Noop;
-  setOperationTree: SetStoreFunction<Operation>;
-}) => {
+const NoopView = () => {
   return <div>undefined</div>;
 };
 
@@ -251,10 +245,7 @@ const OperationView = ({
       />
       <Switch>
         <Match when={operation.type == "noop"}>
-          <NoopView
-            noop={operation as Noop}
-            setOperationTree={setOperationTree}
-          />
+          <NoopView />
         </Match>
         <Match when={operation.type == "constant"}>
           <ConstantView
@@ -380,7 +371,7 @@ export default function LogicStatementBuilder() {
         <input ref={variableInputRef} class="border-2 mr-4 p-1" />
         <button
           class="bg-blue-200 rounded p-2"
-          onClick={(e) => {
+          onClick={() => {
             if (!variableInputRef?.value.trim()) return;
             addVariable(variableInputRef.value);
             variableInputRef.value = "";
@@ -398,13 +389,13 @@ export default function LogicStatementBuilder() {
       </div>
       <button
         class="bg-blue-200 rounded p-2 mt-4"
-        onclick={(e) => console.log(operationTree)}
+        onclick={() => console.log(operationTree)}
       >
         Log Tree
       </button>
       <button
         class="bg-blue-200 rounded p-2 mt-4 ml-4"
-        onclick={(e) => console.log(variables)}
+        onclick={() => console.log(variables)}
       >
         Log variables
       </button>
