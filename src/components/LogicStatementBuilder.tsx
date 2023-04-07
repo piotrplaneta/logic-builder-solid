@@ -1,8 +1,7 @@
 import { For, Match, Switch, createSignal } from "solid-js";
 import { SetStoreFunction, createStore, produce } from "solid-js/store";
 
-type PathPart = "operandA" | "operandB";
-let operationId = 0;
+let incrementialId = 0;
 
 type Variable = {
   id: number;
@@ -10,42 +9,7 @@ type Variable = {
   value: boolean;
 };
 
-type VariableOp = {
-  id: number;
-  value: number;
-  type: "variable";
-  path: PathPart[];
-  operandA: Noop;
-  operandB: Noop;
-};
-
-const VariableOpView = ({
-  variableOp,
-  setOperationTree,
-  variables,
-}: {
-  variableOp: VariableOp;
-  setOperationTree: SetStoreFunction<Operation>;
-  variables: Variable[];
-}) => {
-  return (
-    <select
-      class="border-2 border-gray-400 p-1 my-2"
-      value={variables.find((v) => v.id == variableOp.value)?.id}
-      onchange={(e) => {
-        setOperationTree(
-          ...pathToStorePath(variableOp.path),
-          "value",
-          Number(e.currentTarget.value)
-        );
-      }}
-    >
-      <For each={variables}>
-        {(variable) => <option value={variable.id}>{variable.name}</option>}
-      </For>
-    </select>
-  );
-};
+type PathPart = "operandA" | "operandB";
 
 type Noop = {
   id: number;
@@ -56,6 +20,46 @@ type Noop = {
   operandB: Noop;
 };
 
+type Constant = {
+  id: number;
+  value: boolean;
+  type: "constant";
+  path: PathPart[];
+  operandA: Noop;
+  operandB: Noop;
+};
+
+type VariableId = number;
+
+type VariableOp = {
+  id: number;
+  value: VariableId;
+  type: "variable";
+  path: PathPart[];
+  operandA: Noop;
+  operandB: Noop;
+};
+
+type And = {
+  id: number;
+  operandA: Operation;
+  operandB: Operation;
+  type: "and";
+  path: PathPart[];
+  value: undefined;
+};
+
+type Or = {
+  id: number;
+  operandA: Operation;
+  operandB: Operation;
+  type: "or";
+  path: PathPart[];
+  value: undefined;
+};
+
+type Operation = VariableOp | Constant | And | Or | Noop;
+
 const NoopView = ({
   noop,
   setOperationTree,
@@ -64,15 +68,6 @@ const NoopView = ({
   setOperationTree: SetStoreFunction<Operation>;
 }) => {
   return <div>undefined</div>;
-};
-
-type Constant = {
-  id: number;
-  value: boolean;
-  type: "constant";
-  path: PathPart[];
-  operandA: Noop;
-  operandB: Noop;
 };
 
 const pathToStorePath = (path: PathPart[]) => {
@@ -111,77 +106,59 @@ const ConstantView = ({
   );
 };
 
-type And = {
-  id: number;
-  operandA: Operation;
-  operandB: Operation;
-  type: "and";
-  path: PathPart[];
-  value: undefined;
-};
-
-const AndView = ({
-  and,
+const VariableOpView = ({
+  variableOp,
   setOperationTree,
   variables,
 }: {
-  and: And;
+  variableOp: VariableOp;
+  setOperationTree: SetStoreFunction<Operation>;
+  variables: Variable[];
+}) => {
+  return (
+    <select
+      class="border-2 border-gray-400 p-1 my-2"
+      value={variables.find((v) => v.id == variableOp.value)?.id}
+      onchange={(e) => {
+        setOperationTree(
+          ...pathToStorePath(variableOp.path),
+          "value",
+          Number(e.currentTarget.value)
+        );
+      }}
+    >
+      <For each={variables}>
+        {(variable) => <option value={variable.id}>{variable.name}</option>}
+      </For>
+    </select>
+  );
+};
+
+const BinaryOperatorView = ({
+  operation,
+  setOperationTree,
+  variables,
+}: {
+  operation: And | Or;
   setOperationTree: SetStoreFunction<Operation>;
   variables: Variable[];
 }) => {
   return (
     <div>
       <OperationView
-        operation={and.operandA}
+        operation={operation.operandA}
         setOperationTree={setOperationTree}
         variables={variables}
       />
-      <div>AND</div>
+      <div>{operation.type.toUpperCase()}</div>
       <OperationView
-        operation={and.operandB}
+        operation={operation.operandB}
         setOperationTree={setOperationTree}
         variables={variables}
       />
     </div>
   );
 };
-
-type Or = {
-  id: number;
-  operandA: Operation;
-  operandB: Operation;
-  type: "or";
-  path: PathPart[];
-  value: undefined;
-};
-
-const OrView = ({
-  or,
-  setOperationTree,
-  variables,
-}: {
-  or: Or;
-  setOperationTree: SetStoreFunction<Operation>;
-  variables: Variable[];
-}) => {
-  return (
-    <div>
-      <OperationView
-        operation={or.operandA}
-        setOperationTree={setOperationTree}
-        variables={variables}
-      />
-      <div>OR</div>
-      <OperationView
-        operation={or.operandB}
-        setOperationTree={setOperationTree}
-        variables={variables}
-      />
-    </div>
-  );
-};
-
-type Operation = VariableOp | Constant | And | Or | Noop;
 
 const evaluate = (operation: Operation, variables: Variable[]): boolean => {
   if (operation.type == "noop") {
@@ -205,7 +182,7 @@ const evaluate = (operation: Operation, variables: Variable[]): boolean => {
   }
 };
 
-const ChooseOperationView = ({
+const SelectOperationView = ({
   currentOperation,
   setOperationTree,
   variables,
@@ -235,12 +212,12 @@ const ChooseOperationView = ({
           type: e.currentTarget.value,
           operandA: {
             type: "noop",
-            id: operationId++,
+            id: incrementialId++,
             path: [...currentOperation.path, "operandA"],
           },
           operandB: {
             type: "noop",
-            id: operationId++,
+            id: incrementialId++,
             path: [...currentOperation.path, "operandB"],
           },
           value: generateValue(e.currentTarget.value),
@@ -267,7 +244,7 @@ const OperationView = ({
 }) => {
   return (
     <div classList={{ "ml-8": operation.path.length != 0 }}>
-      <ChooseOperationView
+      <SelectOperationView
         currentOperation={operation}
         setOperationTree={setOperationTree}
         variables={variables}
@@ -293,15 +270,15 @@ const OperationView = ({
           />
         </Match>
         <Match when={operation.type == "and"}>
-          <AndView
-            and={operation as And}
+          <BinaryOperatorView
+            operation={operation as And}
             setOperationTree={setOperationTree}
             variables={variables}
           />
         </Match>
         <Match when={operation.type == "or"}>
-          <OrView
-            or={operation as Or}
+          <BinaryOperatorView
+            operation={operation as Or}
             setOperationTree={setOperationTree}
             variables={variables}
           />
@@ -353,7 +330,7 @@ export default function LogicStatementBuilder() {
     setVariables(
       produce((mutableVariables) => {
         mutableVariables.push({
-          id: ++operationId,
+          id: ++incrementialId,
           name: name,
           value: false,
         });
